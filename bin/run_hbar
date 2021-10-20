@@ -1,0 +1,185 @@
+#!/usr/bin/env python
+
+from hbar.core.dispatcher import job_execution
+from hbar.utils.io import load_yaml
+###
+from hbar.core.eval_robust import eval_robust
+###
+import argparse
+import os
+
+def get_args():
+    """ args from input
+    """
+    parser = argparse.ArgumentParser(description='HSIC-Bottleneck as Regularizer')
+    
+    parser.add_argument('-cfg', '--config', required=True,
+        type=str, help='config input path')
+    parser.add_argument('-tt', '--training-type', default='',
+        type=str, help='training types [hsictrain|backprop|competitor[1-4]]')
+    parser.add_argument('-bs', '--batch-size', default=0,
+        type=int, help='minibatch size')
+    parser.add_argument('-lr', '--learning-rate', default=0,
+        type=float, help='learning rate')
+    parser.add_argument('-lx', '--lambda-x', default=0,
+        type=float, help='the coefficient of the HSIC-bottleneck objective')     
+    parser.add_argument('-ly', '--lambda-y', default=0,
+        type=float, help='the coefficient of the HSIC-bottleneck objective')        
+    parser.add_argument('-ep', '--epochs', default=0,
+        type=int, help='number of training epochs')
+    parser.add_argument('-s', '--sigma', default=0,
+        type=float, help='HSIC sigmas')
+    parser.add_argument('-sd', '--seed', default=0,
+        type=int, help='random seed for the trial')
+    parser.add_argument('-dc', '--data-code', default='',
+        type=str, help='name of the working dataset [mnist|cifar10]')
+    parser.add_argument('-m', '--model', default='',
+        type=str, help='name of the activation func [lenet3|lenet4|vgg16|resnet18]')
+    parser.add_argument('-mf', '--model-file', default='',
+        type=str, help='filename of the interested HSIC-trained model file')
+    parser.add_argument('-db', '--debug',
+        action='store_true', help='debug usage')
+    
+
+    parser.add_argument('-slmo', '--save_last_model_only', action='store_true', help='save last model only')
+    parser.add_argument('-lm', '--load-model', default='', type=str, help='filename of the pre-trained model file')
+    parser.add_argument('-l1', '--l1-norm', action='store_true', help='l1 norm on weights, only for xentropy family')
+    
+    # control the weight of xentropy and hsic, if not specified in yaml file
+    parser.add_argument('-xw', '--xentropy-weight', default=0,type=float, help='how much weight to put on xentropy wrt hsic')
+    parser.add_argument('-hw', '--hsic-weight', default=0,type=float, help='how much weight to put on hsic wrt xentropy')
+    parser.add_argument('-lw', '--l1-weight', default=0,  type=float, help='how much weight to put on l1 wrt xentropy')
+
+    ### Tricks for cifar10:
+    parser.add_argument('--lr-scheduler', type=str, default='', help='define lr scheduler')
+    parser.add_argument('--warmup', action='store_true', default=False, help='warm-up scheduler')
+    parser.add_argument('--warmup-lr', type=float, default=0.0001, metavar='M', help='warmup-lr, smaller than original lr')
+    parser.add_argument('--warmup-epochs', type=int, default=0, metavar='M', help='number of epochs for lr warmup')
+    parser.add_argument('--mixup', action='store_true', default=False, help='ce mixup')
+    parser.add_argument('--alpha', type=float, default=0.0, metavar='M', help='for mixup training, lambda = Beta(alpha, alpha) distribution. Set to 0.0 to disable')
+    parser.add_argument('--smooth', action='store_true', default=False, help='lable smooth')
+    parser.add_argument('--smooth-eps', type=float, default=0.0, metavar='M', help='smoothing rate [0.0, 1.0], set to 0.0 to disable')
+    
+    # if run robustness eval
+    parser.add_argument('-rob', '--robustness', action='store_true', help='if evaluate robustness')
+    parser.add_argument('-att', '--attack-type', type=str, default='', help='attack type')
+    parser.add_argument('-eps', '--epsilon', default=0, type=float, help='eps for adversarial attack')
+    parser.add_argument('-pgda', '--pgd-alpha', default=0, type=float, help='alpha for PGD attack')
+    parser.add_argument('-pgds', '--pgd-steps', default=0, type=int, help='steps for PGD attack')
+    
+    # data augmentation
+    parser.add_argument('-ad', '--aug_data', action='store_true', help='if apply data augmentation for robustness attack')
+    parser.add_argument('-adv', '--adv_train', action='store_true', help='if apply adversarial training for robustness attack')
+    
+    # hsic_layer_decay
+    parser.add_argument('-ld', '--hsic_layer_decay', default=0, type=float, help='hsic weight decay across layers')
+    
+    # specify which kernel to use for y, gaussian or linear
+    parser.add_argument('-kty', '--k-type-y', type=str, choices=['gaussian', 'linear'])
+    
+    args = parser.parse_args()
+
+    return args
+    
+def main():
+
+    #say_hello()
+    args = get_args()
+    config_dict = load_yaml(args.config)
+
+    if args.k_type_y:
+        config_dict['k_type_y'] = args.k_type_y
+    if args.lambda_x:
+        config_dict['lambda_x'] = args.lambda_x
+    if args.lambda_y:
+        config_dict['lambda_y'] = args.lambda_y
+    if args.seed:
+        config_dict['seed'] = args.seed
+    if args.learning_rate:
+        config_dict['learning_rate'] = args.learning_rate
+    if args.model_file:
+        config_dict['model_file'] = args.model_file
+    if args.load_model:
+        config_dict['load_model'] = args.load_model
+    if args.training_type:
+        config_dict['training_type'] = args.training_type
+    if args.batch_size:
+        config_dict['batch_size'] = args.batch_size
+    if args.epochs:
+        config_dict['epochs'] = args.epochs
+    if args.sigma:
+        config_dict['sigma'] = args.sigma
+    if args.data_code:
+        config_dict['data_code'] = args.data_code
+    if args.model:
+        config_dict['model'] = args.model
+
+    ### Robustness Attack
+    
+    if args.attack_type:
+        config_dict['attack_type'] = args.attack_type
+    if args.epsilon:
+        config_dict['epsilon'] = args.epsilon
+    if args.pgd_alpha:
+        config_dict['pgd_alpha'] = args.pgd_alpha
+    if args.pgd_steps:
+        config_dict['pgd_steps'] = args.pgd_steps
+        
+    if config_dict['data_code'] == 'cifar10':
+        config_dict['epsilon'] = config_dict['epsilon']/255
+        config_dict['pgd_alpha'] = config_dict['pgd_alpha']/255
+    
+    if not args.robustness:
+        ### Zifeng: when testing robustness, we dont need these parameters
+        ### Robustness tricks
+        if args.aug_data or 'aug_data' not in config_dict:
+            config_dict['aug_data'] = args.aug_data
+        if args.adv_train or 'adv_train' not in config_dict:
+            config_dict['adv_train'] = args.adv_train
+        if args.hsic_layer_decay or 'hsic_layer_decay' not in config_dict:
+            config_dict['hsic_layer_decay'] = args.hsic_layer_decay
+            
+        if args.save_last_model_only:
+            config_dict['save_last_model_only'] = args.save_last_model_only
+        
+        # Regularizer
+        if args.l1_norm:
+            config_dict['l1_norm'] = args.l1_norm
+        if args.l1_weight:
+            config_dict['l1_weight'] = args.l1_weight
+            
+        if args.xentropy_weight:
+            config_dict['xentropy_weight'] = args.xentropy_weight
+        if args.hsic_weight:
+            config_dict['hsic_weight'] = args.hsic_weight
+        
+        # tricks:
+        if 'lr_scheduler' not in config_dict or args.lr_scheduler:
+            config_dict['lr_scheduler'] = args.lr_scheduler
+        if 'warmup' not in config_dict:
+            config_dict['warmup'] = False 
+        if 'warmup_lr' not in config_dict:
+             config_dict['warmup_lr'] = args.warmup_lr 
+        if 'warmup_epochs' not in config_dict:
+            config_dict['warmup_epochs'] = args.warmup_epochs 
+        if 'mix_up' not in config_dict:
+            config_dict['mix_up'] = False 
+        if 'alpha' not in config_dict:
+            config_dict['alpha'] = 0 
+        if 'smooth' not in config_dict:
+            config_dict['smooth'] = False 
+        if 'smooth_eps' not in config_dict:
+            config_dict['smooth_eps'] = 0 
+        
+   
+    if not args.robustness:
+        for key, val in config_dict.items():
+            print(key, ': ', val)
+        job_execution(config_dict)
+    else:
+        config_dict['robustness'] = args.robustness
+        eval_robust(config_dict)
+
+
+if __name__ == '__main__':
+    main()

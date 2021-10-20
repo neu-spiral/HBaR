@@ -1,0 +1,31 @@
+batch_size: 256
+learning_rate: 0.0001
+epochs: 100
+sigma: 5.
+lambda_x: 0.
+lambda_y: 0.
+seed: 1234
+k_type_y: linear
+
+device: cuda
+model: lenet3
+data_code: mnist
+model_file: hsic_hw1_xentropy_lenet_mnist.pt
+checkpoint: null
+task: pre-train
+training_type: hsictrain
+
+lr_scheduler :  default
+
+log_batch_interval: 10
+verbose: 0
+exp_index: null
+do_training: True
+
+xentropy_weight: 0.
+hsic_weight: 1.
+
+attack_type: pgd
+epsilon: 0.3
+pgd_steps: 40
+pgd_alpha: 0.01
