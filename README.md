@@ -56,13 +56,13 @@ We are releasing selected models trained by HBaR for all three datasets used in 
 
 | Dataset | Architecture | Model |
 | --- | --- | --- |
-| MNIST | LeNet | HBaR|
-| CIFAR-10 | ResNet-18 | HBaR |
+| MNIST | LeNet | [HBaR](http://hdl.handle.net/2047/D20419655) |
+| CIFAR-10 | ResNet-18 | [HBaR](http://hdl.handle.net/2047/D20419654) |
 
 ### Adversarial Training
 | Dataset | Architecture | Model |
 | --- | --- | --- |
-| MNIST | LeNet | HBaR + PGD |
-| CIFAR-10 | ResNet-18 | HBaR + TRADES |
-| CIFAR-10 | WRN-28-10 | HBaR + TRADES |
-| CIFAR-100 | WRN-28-10 | HBaR + TRADES |
+| MNIST | LeNet | [HBaR + PGD](http://hdl.handle.net/2047/D20419656)|
+| CIFAR-10 | ResNet-18 | [HBaR + TRADES](http://hdl.handle.net/2047/D20419657) |
+| CIFAR-10 | WRN-28-10 | [HBaR + TRADES](http://hdl.handle.net/2047/D20419658) |
+| CIFAR-100 | WRN-28-10 | [HBaR + TRADES]( http://hdl.handle.net/2047/D20419659) |
