@@ -28,17 +28,25 @@ numpy-1.16.1
 scipy-1.3.1
 tqdm-4.33.0
 yaml-0.1.7
+torchattacks
 ```
-Please setup environment using:
+
+Please setup environment in the project root directory using:
 ```bash
 source env.sh
+```
+
+After intalling "torchattacks" package, we need to modify one place as follows to make sure our framework work. Please go to the installed package directory (`/.../torchattacks/attacks/`), modify `pgd.py` by finding the line `outputs = self.model(adv_images)`, and insert the following code after it:
+```bash
+if type(outputs) == tuple:
+    outputs = outputs[0]
 ```
 
 ## Running Framework
 
 You could produce the results of Figure 2 & 3, Table 1, 2 & 3 (PGD/HBaR+PGD) by this repository. Regarding MART and TRADES experiments (TRADES/MART/HBaR+TRADES/HBaR+MART), to make a fair comprision, we build our HSIC loss computation upon on MART's framework; but you can still run these experiments using our framework, that releases MART and TRADES loss in the function of `mart_loss` and `trades_loss` in [./source/hbar/core/train_misc.py](./source/hbar/core/train_misc.py).
 
-To reproduce the HBaR experiments that we have in the paper, one could run our batch script by the following instruction:
+To reproduce the HBaR experiments that we have in the paper, please go to the project root directory and run our batch script by the following instruction:
 ```bash
 robust-mnist.sh     # HBaR training (HBaR-high) on MNIST 
 robust-cifar.sh     # HBaR training (HBaR-high) on CIFAR-10
